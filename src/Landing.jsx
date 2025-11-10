@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Spline from '@splinetool/react-spline'
-import { ShieldCheck, ChartLine, Wallet, FileText, Sparkles, ArrowRight } from 'lucide-react'
+import { ShieldCheck, ChartLine, Wallet, FileText, Sparkles, ArrowRight, Check, ChevronRight } from 'lucide-react'
+
+const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
 
 function Pill({ children }) {
   return (
@@ -22,6 +25,88 @@ function Feature({ icon: Icon, title, description }) {
   )
 }
 
+function EmailForm({ compact = false, source = 'website' }) {
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [message, setMessage] = useState('')
+
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    if (!email) return
+    setStatus('loading')
+    setMessage('')
+    try {
+      const res = await fetch(`${API_BASE}/subscribers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: name || undefined, source }),
+      })
+      if (!res.ok) throw new Error('Request failed')
+      setStatus('success')
+      setMessage("You're on the list. Welcome!")
+      setEmail('')
+      setName('')
+    } catch (err) {
+      setStatus('error')
+      setMessage('Something went wrong. Please try again.')
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className={compact ? 'flex gap-2 items-center' : 'grid md:grid-cols-6 gap-2 md:gap-3 max-w-xl mx-auto'}>
+      {!compact && (
+        <input
+          type="text"
+          placeholder="Your name (optional)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="md:col-span-2 h-11 px-3 rounded-xl border border-slate-200 bg-white/80 backdrop-blur focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      )}
+      <input
+        type="email"
+        placeholder="Enter your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        className={(compact ? '' : 'md:col-span-3 ') + 'h-11 px-3 rounded-xl border border-slate-200 bg-white/80 backdrop-blur focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1'}
+      />
+      <button
+        disabled={status === 'loading'}
+        className={(compact ? '' : 'md:col-span-1 ') + 'h-11 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2 px-4'}
+      >
+        {status === 'loading' ? 'Submitting…' : 'Notify me'}
+        <ChevronRight size={16} />
+      </button>
+      {message && (
+        <div className={(compact ? 'w-full' : 'md:col-span-6 ') + 'text-xs text-slate-700 mt-1'}>{message}</div>
+      )}
+    </form>
+  )
+}
+
+function PricingCard({ name, price, description, features = [], highlighted = false }) {
+  return (
+    <div className={(highlighted ? 'border-blue-500/60 ring-1 ring-blue-500/20 ' : '') + 'rounded-2xl border border-white/30 bg-white/70 backdrop-blur p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col'}>
+      <div className="text-sm text-slate-600">{name}</div>
+      <div className="mt-1 text-3xl font-semibold text-slate-900">{price}</div>
+      <div className="text-sm text-slate-600 mt-1">{description}</div>
+      <ul className="mt-4 space-y-2 text-sm text-slate-700">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2">
+            <Check size={16} className="text-blue-600 mt-0.5" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <a href="/app" className={(highlighted ? 'bg-blue-600 text-white hover:bg-blue-700 ' : 'bg-slate-900/90 text-white hover:bg-slate-900 ') + 'mt-6 inline-flex h-10 items-center justify-center rounded-xl px-4 font-medium'}>
+        Get started
+      </a>
+    </div>
+  )
+}
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-50 to-white text-slate-900">
@@ -36,6 +121,7 @@ export default function Landing() {
             <div className="hidden md:flex items-center gap-6 text-sm text-slate-700">
               <a href="#features" className="hover:text-slate-900">Features</a>
               <a href="#how" className="hover:text-slate-900">How it works</a>
+              <a href="#pricing" className="hover:text-slate-900">Pricing</a>
               <a href="#faq" className="hover:text-slate-900">FAQ</a>
             </div>
             <div className="flex items-center gap-2">
@@ -47,7 +133,7 @@ export default function Landing() {
       </div>
 
       {/* Hero */}
-      <div className="relative h-[420px] md:h-[520px] overflow-hidden">
+      <div className="relative h-[460px] md:h-[560px] overflow-hidden">
         <Spline scene="https://prod.spline.design/41MGRk-UDPKO-l6W/scene.splinecode" style={{ width: '100%', height: '100%' }} />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-white" />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -75,14 +161,21 @@ export default function Landing() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="mt-6 flex items-center justify-center gap-3"
+              className="mt-6 flex flex-col items-center gap-3"
             >
-              <a href="/app" className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-white font-medium hover:bg-blue-700">
-                Get Started <ArrowRight size={18} />
-              </a>
-              <a href="#features" className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white/70 backdrop-blur px-4 text-slate-800 hover:bg-white">
-                Learn more
-              </a>
+              <div className="flex items-center justify-center gap-3">
+                <a href="/app" className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-white font-medium hover:bg-blue-700">
+                  Get Started <ArrowRight size={18} />
+                </a>
+                <a href="#features" className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white/70 backdrop-blur px-4 text-slate-800 hover:bg-white">
+                  Learn more
+                </a>
+              </div>
+              {/* Hero CTA form */}
+              <div className="w-full mt-3">
+                <EmailForm source="hero" />
+                <div className="text-[11px] text-slate-500 mt-2">No spam. Unsubscribe anytime.</div>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -164,6 +257,48 @@ export default function Landing() {
         </div>
       </div>
 
+      {/* Pricing */}
+      <div id="pricing" className="mx-auto max-w-7xl px-4 md:px-8 py-10">
+        <div className="max-w-2xl">
+          <div className="text-sm font-medium text-blue-700">Pricing</div>
+          <h2 className="text-2xl md:text-3xl font-semibold mt-1">Simple, transparent plans</h2>
+          <p className="text-slate-600 mt-2">Start free. Upgrade when you need advanced features and priority support.</p>
+        </div>
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
+          <PricingCard
+            name="Starter"
+            price="$0"
+            description="Everything you need to get organized"
+            features={["Unlimited assets", "Investments & crypto tracking", "Basic insights"]}
+          />
+          <PricingCard
+            name="Pro"
+            price="$12/mo"
+            description="Advanced analytics and automations"
+            features={["All Starter features", "Smart net worth breakdowns", "Document management", "Priority support"]}
+            highlighted
+          />
+          <PricingCard
+            name="Enterprise"
+            price="Custom"
+            description="Security, SSO, custom workflows"
+            features={["Custom onboarding", "SLA & security reviews", "Dedicated manager"]}
+          />
+        </div>
+      </div>
+
+      {/* Email capture section */}
+      <div className="mx-auto max-w-6xl px-4 md:px-8 pb-10">
+        <div className="rounded-3xl border border-white/40 bg-white/70 backdrop-blur p-6 md:p-10 text-center">
+          <div className="text-sm font-medium text-blue-700">Stay in the loop</div>
+          <h3 className="text-2xl md:text-3xl font-semibold mt-1">Join the waitlist</h3>
+          <p className="text-slate-600 mt-2">Product updates, tips, and early access invites. No spam. Unsubscribe anytime.</p>
+          <div className="mt-4 flex items-center justify-center">
+            <EmailForm compact source="newsletter" />
+          </div>
+        </div>
+      </div>
+
       {/* FAQ */}
       <div id="faq" className="mx-auto max-w-4xl px-4 md:px-8 py-10">
         <h3 className="text-2xl font-semibold">FAQs</h3>
@@ -183,11 +318,12 @@ export default function Landing() {
 
       {/* Footer */}
       <div className="border-t border-slate-200/70">
-        <div className="mx-auto max-w-7xl px-4 md:px-8 py-6 flex items-center justify-between text-sm text-slate-600">
+        <div className="mx-auto max-w-7xl px-4 md:px-8 py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm text-slate-600">
           <div>© {new Date().getFullYear()} Finexus</div>
           <div className="flex items-center gap-4">
             <a href="#features" className="hover:text-slate-900">Features</a>
             <a href="#how" className="hover:text-slate-900">How it works</a>
+            <a href="#pricing" className="hover:text-slate-900">Pricing</a>
             <a href="#faq" className="hover:text-slate-900">FAQ</a>
           </div>
         </div>
